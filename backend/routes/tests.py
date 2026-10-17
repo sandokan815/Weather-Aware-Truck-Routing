@@ -166,11 +166,6 @@ class PlanTripApiTests(SimpleTestCase):
             self.assertEqual(len(frames), len(cps))
             self.assertEqual(len(frames[0]["risk"]), 49)
 
-        corridor = APIClient().get(
-            f"/api/corridor-weather?trip_id={data['trip_id']}&route_id=1"
-        )
-        self.assertEqual(corridor.status_code, 200)
-
     def test_validation(self):
         resp = APIClient().post("/api/plan-trip", {"origin_lat": 999}, format="json")
         self.assertEqual(resp.status_code, 400)

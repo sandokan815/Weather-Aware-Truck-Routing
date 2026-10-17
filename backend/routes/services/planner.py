@@ -10,14 +10,11 @@ import time
 import uuid
 from datetime import timedelta, timezone
 
-from django.core.cache import cache
-
 from . import risk, routing, weather
 from .geo import auto_sample_miles, build_checkpoints, downsample
 
 CORRIDOR_HOURS = 48          # slider range 0..48 -> 49 hourly frames
 MAX_POLYLINE_POINTS = 2500   # trim payload; plenty for display at any zoom
-TRIP_CACHE_SECONDS = 60 * 60
 
 
 def _floor_hour(dt):
@@ -120,7 +117,6 @@ def plan_trip(origin, dest, departure, load_lb, sample_miles=None):
         "hours": CORRIDOR_HOURS,
         "routes": corridor,
     }
-    cache.set(f"trip:{trip_id}:corridor", corridor_payload, TRIP_CACHE_SECONDS)
 
     return {
         "trip_id": trip_id,
@@ -142,15 +138,3 @@ def plan_trip(origin, dest, departure, load_lb, sample_miles=None):
             "total": round((time.perf_counter() - t0) * 1000),
         },
     }
-
-
-def get_corridor(trip_id, route_id=None):
-    data = cache.get(f"trip:{trip_id}:corridor")
-    if data is None:
-        return None
-    if route_id is None:
-        return data
-    frames = data["routes"].get(int(route_id))
-    if frames is None:
-        return None
-    return {**data, "routes": {int(route_id): frames}}

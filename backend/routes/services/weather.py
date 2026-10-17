@@ -109,6 +109,8 @@ def _fetch_batch(points, start, hours, retries=2):
         timeout=settings.HTTP_TIMEOUT_SECONDS,
         headers={"User-Agent": settings.HTTP_USER_AGENT},
     )
+    # DEBUG: raw third-party response, visible when DJANGO_DEBUG=true
+    log.debug("Open-Meteo GET %s -> %s in %.2fs: %s", resp.url, resp.status_code, resp.elapsed.total_seconds(), resp.text[:500])
     if resp.status_code == 429 and retries > 0:
         time.sleep(1.5)  # burst limit hit - back off and retry
         return _fetch_batch(points, start, hours, retries - 1)

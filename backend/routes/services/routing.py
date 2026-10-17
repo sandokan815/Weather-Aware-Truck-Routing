@@ -1,10 +1,8 @@
 """
 Route options from a third-party routing API.
 
-Providers (ROUTING_PROVIDER): "osrm" (default, free public server), "ors"
-(OpenRouteService, HGV/truck profile, needs ORS_API_KEY), "mapbox" (needs
-MAPBOX_ACCESS_TOKEN), or "mock". If the configured provider fails, the other
-configured providers are tried, then (optionally) mock routes.
+Providers (ROUTING_PROVIDER): "osrm" (default, free public server) or "mock".
+If OSRM fails, (optionally) mock routes are returned.
 
 Routing engines often return fewer than 3 alternatives for long trips (the
 public OSRM server returns just one for LA -> Denver). To always offer 3
@@ -22,7 +20,7 @@ import requests
 from django.conf import settings
 
 from . import mock
-from .geo import METERS_PER_MILE, haversine_mi, overlap_ratio
+from .geo import METERS_PER_MILE, overlap_ratio 
 
 log = logging.getLogger(__name__)
 
@@ -97,62 +95,15 @@ def fetch_osrm(waypoints, alternatives):
         "alternatives": str(alternatives) if alternatives else "false",
     }
     resp = _request("GET", url, params=params)
+    # DEBUG: raw third-party response (visible when DJANGO_DEBUG=true)
+    log.debug("OSRM GET %s -> %s in %.2fs: %s", resp.url, resp.status_code, resp.elapsed.total_seconds(), resp.text[:500])
     data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
     if resp.status_code != 200 or data.get("code") != "Ok":
         raise RoutingError(f"OSRM error {resp.status_code}: {data.get('message') or resp.text[:200]}")
     return _parse_osrm_routes(data)
 
 
-def fetch_mapbox(waypoints, alternatives):
-    if not settings.MAPBOX_ACCESS_TOKEN:
-        raise RoutingError("MAPBOX_ACCESS_TOKEN is not configured")
-    coord_str = ";".join(f"{lon:.6f},{lat:.6f}" for lat, lon in waypoints)
-    url = f"https://api.mapbox.com/directions/v5/mapbox/driving/{coord_str}"
-    params = {
-        "overview": "full",
-        "geometries": "geojson",
-        "alternatives": "true" if alternatives and len(waypoints) == 2 else "false",
-        "access_token": settings.MAPBOX_ACCESS_TOKEN,
-    }
-    resp = _request("GET", url, params=params)
-    data = resp.json()
-    if resp.status_code != 200 or data.get("code") != "Ok":
-        raise RoutingError(f"Mapbox error {resp.status_code}: {data.get('message', '')}")
-    return _parse_osrm_routes(data)
-
-
-def fetch_ors(waypoints, alternatives):
-    """OpenRouteService with the heavy-goods-vehicle (truck) profile."""
-    if not settings.ORS_API_KEY:
-        raise RoutingError("ORS_API_KEY is not configured")
-    body = {"coordinates": [[lon, lat] for lat, lon in waypoints]}
-    straight = haversine_mi(*waypoints[0], *waypoints[-1])
-    # ORS only supports alternative_routes for trips under ~100 km.
-    if alternatives and len(waypoints) == 2 and straight < 55:
-        body["alternative_routes"] = {"target_count": alternatives, "share_factor": 0.6, "weight_factor": 1.6}
-    resp = _request(
-        "POST",
-        "https://api.openrouteservice.org/v2/directions/driving-hgv/geojson",
-        json=body,
-        headers={"Authorization": settings.ORS_API_KEY},
-    )
-    if resp.status_code != 200:
-        raise RoutingError(f"OpenRouteService error {resp.status_code}: {resp.text[:200]}")
-    routes = []
-    for f in resp.json().get("features", []):
-        props = f["properties"]["summary"]
-        routes.append(
-            {
-                "coords": [[lat, lon] for lon, lat in f["geometry"]["coordinates"]],
-                "distance_mi": props["distance"] / METERS_PER_MILE,
-                "duration_min": props["duration"] / 60,
-                "summary": "",
-            }
-        )
-    return routes
-
-
-PROVIDERS = {"osrm": fetch_osrm, "mapbox": fetch_mapbox, "ors": fetch_ors}
+PROVIDERS = {"osrm": fetch_osrm}
 
 
 # ---------------------------------------------------------------------------
@@ -219,14 +170,10 @@ def get_routes(origin, dest, count=3):
     if preferred == "mock":
         return mock.mock_routes(origin, dest), "mock", warnings
 
-    order = [preferred] + [p for p in ("osrm", "ors", "mapbox") if p != preferred]
+    order = [preferred] + [p for p in ("osrm",) if p != preferred]
     for name in order:
         fetch = PROVIDERS.get(name)
         if fetch is None:
-            continue
-        if name == "ors" and not settings.ORS_API_KEY:
-            continue
-        if name == "mapbox" and not settings.MAPBOX_ACCESS_TOKEN:
             continue
         try:
             routes = _routes_with_alternatives(fetch, origin, dest, count)

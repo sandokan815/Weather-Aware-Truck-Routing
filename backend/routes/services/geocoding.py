@@ -1,7 +1,7 @@
 """
 Address search for the origin/destination autocomplete.
 
-GEOCODING_PROVIDER: "nominatim" (default), "photon" or "mapbox".
+GEOCODING_PROVIDER: "nominatim" (default) or "photon".
 
 Nominatim is weak at partial words ("Los Ang" -> a street in Mexico), so for
 type-ahead requests (autocomplete=True) we ask Photon first - same OSM data,
@@ -26,6 +26,8 @@ def _get(url, params):
         timeout=min(settings.HTTP_TIMEOUT_SECONDS, 10),
         headers={"User-Agent": settings.HTTP_USER_AGENT, "Accept-Language": "en"},
     )
+    # DEBUG: raw third-party response (Nominatim / Photon), visible when DJANGO_DEBUG=true
+    log.debug("Geocode GET %s -> %s in %.2fs: %s", resp.url, resp.status_code, resp.elapsed.total_seconds(), resp.text[:500])
     resp.raise_for_status()
     return resp.json()
 
@@ -58,27 +60,8 @@ def photon(query, limit):
     return results[:limit]
 
 
-def mapbox(query, limit):
-    if not settings.MAPBOX_ACCESS_TOKEN:
-        return []
-    params = {
-        "access_token": settings.MAPBOX_ACCESS_TOKEN,
-        "autocomplete": "true",
-        "limit": limit,
-    }
-    if settings.GEOCODE_COUNTRY_CODES:
-        params["country"] = settings.GEOCODE_COUNTRY_CODES
-    data = _get(
-        f"https://api.mapbox.com/geocoding/v5/mapbox.places/{requests.utils.quote(query)}.json",
-        params,
-    )
-    return [
-        {"label": f["place_name"], "lat": f["center"][1], "lon": f["center"][0]}
-        for f in data.get("features", [])
-    ]
 
-
-PROVIDERS = {"nominatim": nominatim, "photon": photon, "mapbox": mapbox}
+PROVIDERS = {"nominatim": nominatim, "photon": photon}
 
 
 def search(query, limit=5, autocomplete=False):
