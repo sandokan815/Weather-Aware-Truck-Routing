@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .services import geocoding, planner
-from .services.geo import haversine_mi
+from .services.geo import SAMPLE_CHOICES, haversine_mi
 from .services.routing import RoutingError
 from .services.weather import WeatherError
 
@@ -20,7 +20,8 @@ class PlanTripSerializer(serializers.Serializer):
     dest_lon = serializers.FloatField(min_value=-180, max_value=180)
     departure_iso = serializers.DateTimeField(required=False)
     load_weight_lb = serializers.FloatField(min_value=0, max_value=80_000)
-    sample_miles = serializers.ChoiceField(choices=[10, 25, 50], default=25)
+    # Optional override; when omitted the planner picks 10/25/50 from trip length.
+    sample_miles = serializers.ChoiceField(choices=SAMPLE_CHOICES, required=False)
 
     def validate_departure_iso(self, value):
         now = datetime.now(timezone.utc)
@@ -54,7 +55,7 @@ class PlanTripView(APIView):
                 dest=[d["dest_lat"], d["dest_lon"]],
                 departure=d.get("departure_iso") or datetime.now(timezone.utc),
                 load_lb=d["load_weight_lb"],
-                sample_miles=int(d["sample_miles"]),
+                sample_miles=int(d["sample_miles"]) if "sample_miles" in d else None,
             )
         except (RoutingError, WeatherError) as exc:
             return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)

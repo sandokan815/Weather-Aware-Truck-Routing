@@ -31,7 +31,6 @@ export default function App() {
         dest_lon: form.destination.lon,
         departure_iso: form.departure_iso,
         load_weight_lb: form.load_weight_lb,
-        sample_miles: form.sample_miles,
       })
       setResult(data)
       setSelectedId(data.recommended_route_id)
@@ -80,7 +79,7 @@ export default function App() {
                 onFocusCheckpoint={(cp) => setFocus({ cp, at: Date.now() })}
               />
               <p className="text-center text-[10px] text-slate-400">
-                Routing: {result.data_sources.routing} · Weather: {result.data_sources.weather} · {(result.timing_ms.total / 1000).toFixed(1)} s
+                Checkpoints every {result.sample_miles} mi · Routing: {result.data_sources.routing} · Weather: {result.data_sources.weather} · {(result.timing_ms.total / 1000).toFixed(1)} s
               </p>
             </>
           )}

@@ -38,6 +38,22 @@ def point_at_distance(coords, cum, dist):
     return [lat1 + (lat2 - lat1) * t, lon1 + (lon2 - lon1) * t]
 
 
+SAMPLE_CHOICES = (10, 25, 50)
+
+
+def auto_sample_miles(total_miles):
+    """
+    Checkpoint spacing chosen from trip length: dense sampling on short hauls
+    where each checkpoint matters, coarser on long hauls to bound the number
+    of weather lookups (<= ~70 checkpoints per route at the 3,500 mi cap).
+    """
+    if total_miles <= 300:
+        return 10
+    if total_miles <= 1000:
+        return 25
+    return 50
+
+
 def checkpoint_miles(total_miles, sample_miles):
     """Mile markers 0, N, 2N, ... plus the destination (always included)."""
     marks = []

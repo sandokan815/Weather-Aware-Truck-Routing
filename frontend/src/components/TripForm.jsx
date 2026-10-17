@@ -21,7 +21,6 @@ export default function TripForm({ onSubmit, loading }) {
   const [destination, setDestination] = useState(EMPTY)
   const [departure, setDeparture] = useState(nowLocal)
   const [load, setLoad] = useState('40500')
-  const [sample, setSample] = useState(25)
   const [formError, setFormError] = useState('')
 
   // If the user typed an address but never picked a suggestion, take the top match.
@@ -50,7 +49,6 @@ export default function TripForm({ onSubmit, loading }) {
         destination: d,
         departure_iso: departure ? new Date(departure).toISOString() : new Date().toISOString(),
         load_weight_lb: loadNum,
-        sample_miles: Number(sample),
       })
     } catch (err) {
       setFormError(err.message || 'Could not look up the addresses.')
@@ -90,37 +88,20 @@ export default function TripForm({ onSubmit, loading }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="load" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Load weight (lb)
-          </label>
-          <input
-            id="load"
-            type="number"
-            min="0"
-            max="80000"
-            step="500"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            value={load}
-            onChange={(e) => setLoad(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="sample" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Sample every
-          </label>
-          <select
-            id="sample"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            value={sample}
-            onChange={(e) => setSample(Number(e.target.value))}
-          >
-            <option value={10}>10 miles</option>
-            <option value={25}>25 miles</option>
-            <option value={50}>50 miles</option>
-          </select>
-        </div>
+      <div>
+        <label htmlFor="load" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Load weight (lb)
+        </label>
+        <input
+          id="load"
+          type="number"
+          min="0"
+          max="80000"
+          step="500"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+          value={load}
+          onChange={(e) => setLoad(e.target.value)}
+        />
       </div>
 
       {formError && <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">{formError}</p>}
@@ -139,7 +120,6 @@ export default function TripForm({ onSubmit, loading }) {
           setOrigin(EXAMPLE.origin)
           setDestination(EXAMPLE.destination)
           setLoad('40500')
-          setSample(25)
           setDeparture(nowLocal())
         }}
         className="w-full text-center text-xs text-slate-500 hover:text-teal-700"

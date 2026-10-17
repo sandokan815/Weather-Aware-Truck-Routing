@@ -13,7 +13,7 @@ from datetime import timedelta, timezone
 from django.core.cache import cache
 
 from . import risk, routing, weather
-from .geo import build_checkpoints, downsample
+from .geo import auto_sample_miles, build_checkpoints, downsample
 
 CORRIDOR_HOURS = 48          # slider range 0..48 -> 49 hourly frames
 MAX_POLYLINE_POINTS = 2500   # trim payload; plenty for display at any zoom
@@ -24,9 +24,10 @@ def _floor_hour(dt):
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
-def plan_trip(origin, dest, departure, load_lb, sample_miles):
+def plan_trip(origin, dest, departure, load_lb, sample_miles=None):
     """
     origin/dest: [lat, lon]; departure: aware datetime; returns the API payload.
+    sample_miles: checkpoint spacing; None picks 10/25/50 from the trip length.
     """
     t0 = time.perf_counter()
     departure = departure.astimezone(timezone.utc)
@@ -36,6 +37,9 @@ def plan_trip(origin, dest, departure, load_lb, sample_miles):
     t_routes = time.perf_counter()
 
     # 2-3. Checkpoints + ETA -------------------------------------------------
+    # One spacing for all alternatives (based on the longest) so they compare fairly.
+    if sample_miles is None:
+        sample_miles = auto_sample_miles(max(r["distance_mi"] for r in raw_routes))
     # checkpoint_eta = departure + (mile / total_miles) * total_duration
     routes = []
     for i, r in enumerate(raw_routes, start=1):
