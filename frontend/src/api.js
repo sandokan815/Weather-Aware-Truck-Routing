@@ -13,7 +13,9 @@ export function errorMessage(err) {
       .map(([field, msgs]) => `${field === 'non_field_errors' ? '' : field + ': '}${[].concat(msgs).join(' ')}`)
       .join(' · ')
   }
-  if (data?.error) return data.error
+  // Our API sends a string; hosts/proxies (e.g. Vercel 404s) send { code, message }.
+  if (typeof data?.error === 'string') return data.error
+  if (typeof data?.error?.message === 'string') return `${data.error.message} (HTTP ${err.response.status})`
   if (err?.code === 'ECONNABORTED') return 'The request timed out. Please try again.'
   if (err?.request && !err?.response) return 'Cannot reach the server. Is the Django backend running on port 8000?'
   return err?.message || 'Something went wrong.'
