@@ -10,7 +10,7 @@ from django.test import SimpleTestCase, override_settings
 from rest_framework.test import APIClient
 
 from routes.services import risk
-from routes.services.geo import build_checkpoints, checkpoint_miles, cumulative_miles
+from routes.services.geo import auto_sample_miles, build_checkpoints, checkpoint_miles, cumulative_miles
 from routes.services.risk import HIGH, LOW, MODERATE, NO_TRAVEL, SEVERE
 
 
@@ -69,6 +69,11 @@ class LoadRuleTests(SimpleTestCase):
 
 
 class CheckpointTests(SimpleTestCase):
+    def test_auto_sample_miles_by_trip_length(self):
+        cases = [(50, 10), (300, 10), (300.1, 25), (1000, 25), (1000.1, 50), (3000, 50)]
+        for miles, expected in cases:
+            self.assertEqual(auto_sample_miles(miles), expected, miles)
+
     def test_marks_include_start_and_end(self):
         self.assertEqual(checkpoint_miles(60, 25), [0, 25, 50, 60])
         self.assertEqual(checkpoint_miles(50, 25), [0, 25, 50])
@@ -139,13 +144,15 @@ class PlanTripApiTests(SimpleTestCase):
                 "origin_lat": 34.0522, "origin_lon": -118.2437,
                 "dest_lat": 39.7392, "dest_lon": -104.9903,
                 "departure_iso": datetime.now(timezone.utc).isoformat(),
-                "load_weight_lb": 40500, "sample_miles": 25,
+                "load_weight_lb": 40500,
             },
             format="json",
         )
         self.assertEqual(resp.status_code, 200, resp.content)
         data = resp.json()
         self.assertEqual(len(data["routes"]), 3)
+        longest = max(r["total_miles"] for r in data["routes"])
+        self.assertEqual(data["sample_miles"], auto_sample_miles(longest))
         self.assertIn(data["recommended_route_id"], [r["id"] for r in data["routes"]])
         for r in data["routes"]:
             cps = r["checkpoints"]
