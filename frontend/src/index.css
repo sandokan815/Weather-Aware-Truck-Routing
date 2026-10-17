@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+html, body, #root { height: 100%; }
+body { @apply bg-slate-100 text-slate-800 antialiased; }
+
+/* Leaflet popups: tighter typography */
+.leaflet-popup-content { margin: 10px 12px; font-size: 12px; line-height: 1.45; }
+.leaflet-container { font-family: inherit; }
+
+/* Truck + A/B markers are divIcons: strip Leaflet's default white box */
+.plain-div-icon { background: transparent; border: none; }
+
+input[type="range"].forecast { accent-color: #0f766e; }
