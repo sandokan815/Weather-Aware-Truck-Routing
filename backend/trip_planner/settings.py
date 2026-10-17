@@ -42,8 +42,7 @@ WSGI_APPLICATION = "trip_planner.wsgi.application"
 # No database is needed - routes, weather and results are computed on the fly.
 DATABASES = {}
 
-# In-process cache for geocoding / weather lookups and computed trip results
-# (used by GET /api/corridor-weather).
+# In-process cache for geocoding / weather lookups.
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -103,5 +102,6 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "loggers": {"routes": {"handlers": ["console"], "level": "INFO"}},
+    # DEBUG level prints the raw third-party API responses (OSRM, Nominatim, Photon, Open-Meteo).
+    "loggers": {"routes": {"handlers": ["console"], "level": "DEBUG" if DEBUG else "INFO"}},
 }

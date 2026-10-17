@@ -65,21 +65,6 @@ class PlanTripView(APIView):
         return Response(result)
 
 
-class CorridorWeatherView(APIView):
-    """GET /api/corridor-weather?trip_id=...&route_id=... - heatmap frames of a planned trip."""
-
-    def get(self, request):
-        trip_id = request.query_params.get("trip_id")
-        route_id = request.query_params.get("route_id")
-        if not trip_id:
-            return Response({"error": "trip_id is required"}, status=400)
-        if route_id is not None and not route_id.isdigit():
-            return Response({"error": "route_id must be an integer"}, status=400)
-        data = planner.get_corridor(trip_id, route_id)
-        if data is None:
-            return Response({"error": "Trip or route not found (results expire after 1 h)."}, status=404)
-        return Response(data)
-
 
 class GeocodeView(APIView):
     """GET /api/geocode?q=...&autocomplete=1 - address search / type-ahead."""
